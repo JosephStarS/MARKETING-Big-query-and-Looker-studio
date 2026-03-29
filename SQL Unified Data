@@ -1,0 +1,84 @@
+CREATE OR REPLACE TABLE `Marketing_Analytics.unified_ads` AS
+WITH fb AS (
+  SELECT
+    DATE(date) AS date,
+    'facebook' AS platform,
+    campaign_id,
+    campaign_name,
+    ad_set_id AS ad_group_id,
+    ad_set_name AS ad_group_name,
+    impressions,
+    clicks,
+    spend,
+    conversions,
+    NULL AS revenue,  -- Facebook no tiene revenue
+    reach,
+    frequency,
+    NULL AS quality_score,
+    NULL AS search_impression_share,
+    NULL AS engagement_likes,
+    NULL AS engagement_shares,
+    NULL AS engagement_comments
+  FROM `Marketing_Analytics.Facebook`
+),
+
+gg AS (
+  SELECT
+    DATE(date) AS date,
+    'google' AS platform,
+    campaign_id,
+    campaign_name,
+    ad_group_id,
+    ad_group_name,
+    impressions,
+    clicks,
+    cost AS spend,
+    conversions,
+    conversion_value AS revenue, -- Renombrado correctamente
+    NULL AS reach,
+    NULL AS frequency,
+    quality_score,
+    search_impression_share,
+    NULL AS engagement_likes,
+    NULL AS engagement_shares,
+    NULL AS engagement_comments
+  FROM `Marketing_Analytics.Google`
+),
+
+tk AS (
+  SELECT
+    DATE(date) AS date,
+    'tiktok' AS platform,
+    campaign_id,
+    campaign_name,
+    adgroup_id AS ad_group_id,
+    adgroup_name AS ad_group_name,
+    impressions,
+    clicks,
+    cost AS spend,          -- corrected
+    conversions,
+    NULL AS revenue,        -- TikTok has no revenue field
+    NULL AS reach,
+    NULL AS frequency,
+    NULL AS quality_score,
+    NULL AS search_impression_share,
+    likes AS engagement_likes,
+    shares AS engagement_shares,
+    comments AS engagement_comments
+  FROM `Marketing_Analytics.Tiktok`
+)
+
+
+SELECT
+  *,
+  SAFE_DIVIDE(clicks, impressions) AS ctr,
+  SAFE_DIVIDE(spend, clicks) AS cpc,
+  SAFE_DIVIDE(spend, conversions) AS cpa,
+  SAFE_DIVIDE(revenue, spend) AS roas
+FROM (
+  SELECT * FROM fb
+  UNION ALL
+  SELECT * FROM gg
+  UNION ALL
+  SELECT * FROM tk
+);
